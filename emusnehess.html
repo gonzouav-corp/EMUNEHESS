@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <title>NES in-browser (POC) — jsnes</title>
+  <style>
+    body { font-family: system-ui, sans-serif; display:flex; gap:1rem; padding:1rem; }
+    #screen { border:1px solid #222; image-rendering: pixelated; }
+  </style>
+</head>
+<body>
+  <div>
+    <h3>Charger une ROM (.nes) (local uniquement)</h3>
+    <input id="romInput" type="file" accept=".nes" />
+    <div>
+      <button id="btnRun" disabled>Run</button>
+      <button id="btnPause" disabled>Pause</button>
+    </div>
+    <p id="status">Aucune ROM chargée.</p>
+  </div>
+
+  <canvas id="screen" width="256" height="240"></canvas>
+
+  <!-- jsnes (via unpkg) -->
+  <script src="https://unpkg.com/jsnes/dist/jsnes.min.js"></script>
+  <script>
+    // Note: ceci est un POC minimal. Voir docs jsnes pour audio/optimisations.
+    const romInput = document.getElementById('romInput');
+    const btnRun = document.getElementById('btnRun');
+    const btnPause = document.getElementById('btnPause');
+    const status = document.getElementById('status');
+    const canvas = document.getElementById('screen');
+    const ctx = canvas.getContext('2d');
+
+    // create image buffer for NES pixels (256x240)
+    const imgData = ctx.createImageData(256, 240);
+
+    let nes = null;
+    let running = false;
+
+    // simple renderer: jsnes supports a callback for each frame
+    function makeNes() {
+      const nesInstance = new jsnes.NES({
+        onFrame: function(frameBuffer) {
+          // frameBuffer is an array of 256*240 RGB values (0..255) per pixel [r,g,b,r,g,b...]
+          // convert to ImageData (RGBA)
+          for(let i=0, j=0; i < frameBuffer.length; i += 3, j += 4) {
+            imgData.data[j]   = frameBuffer[i];     // r
+            imgData.data[j+1] = frameBuffer[i+1];   // g
+            imgData.data[j+2] = frameBuffer[i+2];   // b
+            imgData.data[j+3] = 255;                // a
+          }
+          ctx.putImageData(imgData, 0, 0);
+        },
+        onAudioSample: function() { /* optionally handle audio */ }
+      });
+      return nesInstance;
+    }
+
+    romInput.addEventListener('change', (ev) => {
+      const f = ev.target.files[0];
+      if(!f) return;
+      status.textContent = `Chargement de ${f.name}...`;
+      const reader = new FileReader();
+      reader.onload = function() {
+        const arrayBuffer = reader.result;
+        const romData = new Uint8Array(arrayBuffer);
+        nes = makeNes();
+        try {
+          nes.loadROM(romData);
+        } catch (e) {
+          status.textContent = "Erreur lors du chargement de la ROM : " + e.message;
+          return;
+        }
+        status.textContent = `${f.name} chargé — prêt à lancer`;
+        btnRun.disabled = false;
+        btnPause.disabled = false;
+      };
+      reader.readAsArrayBuffer(f);
+    });
+
+    // simple run loop (POC)
+    let rafId = null;
+    function frame() {
+      // faire tourner la NES un nombre d'itérations par frame selon le framerate attendu
+      // jsnes fournit step() mais l'API exacte varie selon versions : ceci est basique
+      if (nes && running) {
+        // run cpu cycles for one frame
+        nes.frame();
+      }
+      rafId = requestAnimationFrame(frame);
+    }
+
+    btnRun.addEventListener('click', () => {
+      if (!nes) return;
+      running = true;
+      status.textContent = "En cours...";
+      if (!rafId) frame();
+    });
+    btnPause.addEventListener('click', () => {
+      running = false;
+      status.textContent = "En pause.";
+    });
+
+    // Note : pour intégration sérieuse -> audio via WebAudio, mapping des boutons, gestion des save states (IndexedDB).
+  </script>
+</body>
+</html>
