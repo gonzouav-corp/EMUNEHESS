@@ -1,25 +1,22 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>NES Web (POC) — Local ROM only</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NES Web POC</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <header>
-    <h1>NES in-browser (POC)</h1>
+    <h1>NES in-browser POC</h1>
   </header>
 
   <section>
-    <p>
-      Ce site **ne stocke pas** les ROMs. <strong>Tous les fichiers .nes sont lus localement</strong> dans ton navigateur.
-      N’utilisez que vos copies légales.
-    </p>
+    <p>Ce site ne stocke pas les ROMs. Tous les fichiers .nes sont lus localement dans le navigateur.</p>
 
     <label>
-      <strong>Charger une ROM (.nes)</strong>
-      <input id="romInput" type="file" accept=".nes" />
+      Charger une ROM (.nes):
+      <input type="file" id="romInput" accept=".nes">
     </label>
 
     <div class="controls">
@@ -30,12 +27,12 @@
       <button id="btnLoadState" disabled>Load state</button>
     </div>
 
-    <p id="status" class="note">Aucune ROM chargée.</p>
+    <p id="status">Aucune ROM chargée.</p>
   </section>
 
-  <canvas id="screen" width="256" height="240" aria-label="NES screen"></canvas>
+  <canvas id="screen" width="256" height="240"></canvas>
 
-  <!-- JSNES (doit être chargé avant nes.js) -->
+  <!-- JSNES doit être chargé avant nes.js -->
   <script src="https://cdn.jsdelivr.net/npm/jsnes@0.7.0/dist/jsnes.min.js"></script>
   <script src="nes.js"></script>
 </body>
