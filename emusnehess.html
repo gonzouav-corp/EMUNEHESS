@@ -2,107 +2,194 @@
 <html lang="fr">
 <head>
   <meta charset="utf-8" />
-  <title>NES in-browser (POC) — jsnes</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>NES Web (POC) — Local ROM only</title>
   <style>
-    body { font-family: system-ui, sans-serif; display:flex; gap:1rem; padding:1rem; }
-    #screen { border:1px solid #222; image-rendering: pixelated; }
+    body { font-family: system-ui, Arial, sans-serif; max-width:900px; margin:18px auto; padding:12px; }
+    header { display:flex; align-items:center; gap:12px; }
+    #screen { border:1px solid #222; image-rendering: pixelated; width:512px; height:480px; }
+    .controls { margin-top:8px; display:flex; gap:8px; flex-wrap:wrap; }
+    .note { margin-top:12px; color:#333; font-size:0.9rem; }
   </style>
 </head>
 <body>
-  <div>
-    <h3>Charger une ROM (.nes) (local uniquement)</h3>
-    <input id="romInput" type="file" accept=".nes" />
-    <div>
+  <header>
+    <h1>NES in-browser (POC)</h1>
+  </header>
+
+  <section>
+    <p>
+      Ce site **ne stocke pas** les ROMs. <strong>Tous les fichiers .nes sont lus localement</strong> dans ton navigateur.
+      Ne télécharge pas de ROM piratée — utilise une copie que tu possèdes.
+    </p>
+
+    <label>
+      <strong>Charger une ROM (.nes)</strong>
+      <input id="romInput" type="file" accept=".nes" />
+    </label>
+
+    <div class="controls">
       <button id="btnRun" disabled>Run</button>
       <button id="btnPause" disabled>Pause</button>
+      <button id="btnReset" disabled>Reset</button>
+      <button id="btnSaveState" disabled>Save state</button>
+      <button id="btnLoadState" disabled>Load state</button>
     </div>
-    <p id="status">Aucune ROM chargée.</p>
-  </div>
 
-  <canvas id="screen" width="256" height="240"></canvas>
+    <p id="status" class="note">Aucune ROM chargée.</p>
+  </section>
 
-  <!-- jsnes (via unpkg) -->
-  <script src="https://unpkg.com/jsnes/dist/jsnes.min.js"></script>
+  <canvas id="screen" width="256" height="240" aria-label="NES screen"></canvas>
+
+  <!-- jsnes via CDN (POC). Pour production : pin à une version ou héberger localement -->
+  <script src="https://unpkg.com/jsnes@0.7.0/dist/jsnes.min.js"></script>
+
   <script>
-    // Note: ceci est un POC minimal. Voir docs jsnes pour audio/optimisations.
+    // POC minimal: load .nes local file, run jsnes, display frames, simple save state (in-memory)
     const romInput = document.getElementById('romInput');
     const btnRun = document.getElementById('btnRun');
     const btnPause = document.getElementById('btnPause');
+    const btnReset = document.getElementById('btnReset');
+    const btnSaveState = document.getElementById('btnSaveState');
+    const btnLoadState = document.getElementById('btnLoadState');
     const status = document.getElementById('status');
     const canvas = document.getElementById('screen');
     const ctx = canvas.getContext('2d');
 
-    // create image buffer for NES pixels (256x240)
     const imgData = ctx.createImageData(256, 240);
-
     let nes = null;
     let running = false;
+    let rafId = null;
+    let savedState = null;
 
-    // simple renderer: jsnes supports a callback for each frame
     function makeNes() {
       const nesInstance = new jsnes.NES({
         onFrame: function(frameBuffer) {
-          // frameBuffer is an array of 256*240 RGB values (0..255) per pixel [r,g,b,r,g,b...]
-          // convert to ImageData (RGBA)
-          for(let i=0, j=0; i < frameBuffer.length; i += 3, j += 4) {
-            imgData.data[j]   = frameBuffer[i];     // r
-            imgData.data[j+1] = frameBuffer[i+1];   // g
-            imgData.data[j+2] = frameBuffer[i+2];   // b
-            imgData.data[j+3] = 255;                // a
+          // frameBuffer = [r,g,b,r,g,b,...]
+          for (let i = 0, j = 0; i < frameBuffer.length; i += 3, j += 4) {
+            imgData.data[j]   = frameBuffer[i];
+            imgData.data[j+1] = frameBuffer[i+1];
+            imgData.data[j+2] = frameBuffer[i+2];
+            imgData.data[j+3] = 255;
           }
           ctx.putImageData(imgData, 0, 0);
         },
-        onAudioSample: function() { /* optionally handle audio */ }
+        onAudioSample: function() { /* audio POC omitted */ }
       });
       return nesInstance;
     }
 
-    romInput.addEventListener('change', (ev) => {
-      const f = ev.target.files[0];
-      if(!f) return;
+    function startLoop() {
+      if (rafId) return;
+      function frame() {
+        if (nes && running) nes.frame();
+        rafId = requestAnimationFrame(frame);
+      }
+      frame();
+    }
+
+    function stopLoop() {
+      if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+    }
+
+    romInput.addEventListener('change', (e) => {
+      const f = e.target.files[0];
+      if (!f) return;
       status.textContent = `Chargement de ${f.name}...`;
       const reader = new FileReader();
       reader.onload = function() {
-        const arrayBuffer = reader.result;
-        const romData = new Uint8Array(arrayBuffer);
-        nes = makeNes();
         try {
+          const romData = new Uint8Array(reader.result);
+          nes = makeNes();
           nes.loadROM(romData);
-        } catch (e) {
-          status.textContent = "Erreur lors du chargement de la ROM : " + e.message;
+        } catch (err) {
+          status.textContent = "Erreur au chargement : " + err.message;
           return;
         }
-        status.textContent = `${f.name} chargé — prêt à lancer`;
+        status.textContent = `${f.name} chargé — prêt.`;
         btnRun.disabled = false;
         btnPause.disabled = false;
+        btnReset.disabled = false;
+        btnSaveState.disabled = false;
+        btnLoadState.disabled = false;
       };
       reader.readAsArrayBuffer(f);
     });
-
-    // simple run loop (POC)
-    let rafId = null;
-    function frame() {
-      // faire tourner la NES un nombre d'itérations par frame selon le framerate attendu
-      // jsnes fournit step() mais l'API exacte varie selon versions : ceci est basique
-      if (nes && running) {
-        // run cpu cycles for one frame
-        nes.frame();
-      }
-      rafId = requestAnimationFrame(frame);
-    }
 
     btnRun.addEventListener('click', () => {
       if (!nes) return;
       running = true;
       status.textContent = "En cours...";
-      if (!rafId) frame();
+      startLoop();
     });
+
     btnPause.addEventListener('click', () => {
       running = false;
       status.textContent = "En pause.";
     });
 
-    // Note : pour intégration sérieuse -> audio via WebAudio, mapping des boutons, gestion des save states (IndexedDB).
+    btnReset.addEventListener('click', () => {
+      if (!nes) return;
+      nes.reset();
+      status.textContent = "Reset effectué.";
+    });
+
+    btnSaveState.addEventListener('click', () => {
+      if (!nes) return;
+      try {
+        // jsnes doesn't provide a standard saveState API in all builds;
+        // this is a simple POC: serialize CPU/memory if available.
+        // Here, we just store a copy of RAM and PPU state if present.
+        if (nes.toJSON) {
+          savedState = JSON.stringify(nes.toJSON());
+          status.textContent = "État sauvegardé (mémoire volatile).";
+        } else {
+          status.textContent = "Sauvegarde non supportée dans cette version.";
+        }
+      } catch (err) {
+        status.textContent = "Erreur sauvegarde: " + err.message;
+      }
+    });
+
+    btnLoadState.addEventListener('click', () => {
+      if (!nes || !savedState) { status.textContent = "Aucun état à charger."; return; }
+      try {
+        if (nes.fromJSON) {
+          nes.fromJSON(JSON.parse(savedState));
+          status.textContent = "État chargé.";
+        } else {
+          status.textContent = "Chargement d'état non supporté dans cette version.";
+        }
+      } catch (err) {
+        status.textContent = "Erreur chargement état: " + err.message;
+      }
+    });
+
+    // Mapping clavier simple (WASD/Cursor / ZQSD selon préférence)
+    window.addEventListener('keydown', (ev) => {
+      if (!nes) return;
+      const map = {
+        'ArrowLeft': 0x80, 'ArrowRight': 0x40, 'ArrowUp': 0x20, 'ArrowDown': 0x10,
+        'z': 0x01, 'Z': 0x01, 'x': 0x02, 'X': 0x02 // A: z, B: x (fr layout)
+      };
+      const b = map[ev.key];
+      if (b !== undefined) {
+        nes.controller1.state |= b;
+        ev.preventDefault();
+      }
+    });
+    window.addEventListener('keyup', (ev) => {
+      if (!nes) return;
+      const map = {
+        'ArrowLeft': 0x80, 'ArrowRight': 0x40, 'ArrowUp': 0x20, 'ArrowDown': 0x10,
+        'z': 0x01, 'Z': 0x01, 'x': 0x02, 'X': 0x02
+      };
+      const b = map[ev.key];
+      if (b !== undefined) {
+        nes.controller1.state &= ~b;
+        ev.preventDefault();
+      }
+    });
   </script>
 </body>
 </html>
