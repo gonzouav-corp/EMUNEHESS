@@ -9,6 +9,7 @@ body {
 
 header h1 {
   margin-bottom: 12px;
+  vertical-align: middle;
 }
 
 section p {
@@ -36,4 +37,5 @@ section p {
   font-size: 0.9rem;
   color: #333;
 }
+
 
