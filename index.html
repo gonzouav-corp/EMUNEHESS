@@ -1,40 +1,54 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
   <title>EMUNEHESS</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="styles.css">
+  <script src="script.js"></script>
 </head>
 <body>
-  <header>
-    <h1>EMUNEHESS ONLINE</h1>
-  </header>
+ 
+     <main class="titre">
+      <br>
+      <br>
+      <h1>EMUNEHESS</h1>
+          <button class="button">Importer</button>
+          <br>
+          <br>
+          <br>
 
-  <section>
-    <p>Ce site ne stocke pas les ROMs. Tous les fichiers .nes sont lus localement dans le navigateur.</p>
+            <div class="aesthetic-screen">
+            <div class="screen">
+              <div class="screen-border">
+                <div class="screen-content">
+                  <p class="pixel-text">Bienvenue sur EMUNEHESS !</p>
+                  <p class="pixel-text">Chargez vos ROMs pour commencer.</p>
+                </div>
+              </div>
+            </div>
+           </div>
+          <br>
+          <br>
+          <br>
+           <video src="Mario.mp4" width="800" controls autoplay muted loop>  </video>
+            
+          
+        
+     
 
-    <label>
-      Charger une ROM (.nes):
-      <input type="file" id="romInput" accept=".nes">
-    </label>
+          
+        
+        
 
-    <div class="controls">
-      <button id="btnRun" disabled>Run</button>
-      <button id="btnPause" disabled>Pause</button>
-      <button id="btnReset" disabled>Reset</button>
-      <button id="btnSaveState" disabled>Save state</button>
-      <button id="btnLoadState" disabled>Load state</button>
-    </div>
 
-    <p id="status">Aucune ROM chargée.</p>
-  </section>
 
-  <canvas id="screen" width="256" height="240"></canvas>
 
-  <!-- JSNES doit être chargé avant nes.js -->
-  <script src="https://cdn.jsdelivr.net/npm/jsnes@0.7.0/dist/jsnes.min.js"></script>
-  <script src="nes.js"></script>
+        </div>
+        </div>
+      </main>
 </body>
 </html>
-

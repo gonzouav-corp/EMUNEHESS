@@ -1,83 +1,134 @@
-const romInput = document.getElementById('romInput');
-const btnRun = document.getElementById('btnRun');
-const btnPause = document.getElementById('btnPause');
-const btnReset = document.getElementById('btnReset');
-const btnSaveState = document.getElementById('btnSaveState');
-const btnLoadState = document.getElementById('btnLoadState');
-const status = document.getElementById('status');
-const canvas = document.getElementById('screen');
-const ctx = canvas.getContext('2d');
+import { useEffect, useId, useLayoutEffect, useRef } from 'react';
 
-let nes = null;
-let running = false;
-let rafId = null;
-let savedState = null;
+import './ElectricBorder.css';
 
-const imgData = ctx.createImageData(256, 240);
+const ElectricBorder = ({ children, color = '#5227FF', speed = 1, chaos = 1, thickness = 2, className, style }) => {
+  const rawId = useId().replace(/[:]/g, '');
+  const filterId = `turbulent-displace-${rawId}`;
+  const svgRef = useRef(null);
+  const rootRef = useRef(null);
+  const strokeRef = useRef(null);
 
-function makeNes() {
-    if (!window.jsnes) {
-        alert("JSNES n'est pas chargé correctement !");
-        return null;
+  const updateAnim = () => {
+    const svg = svgRef.current;
+    const host = rootRef.current;
+    if (!svg || !host) return;
+
+    if (strokeRef.current) {
+      strokeRef.current.style.filter = `url(#${filterId})`;
     }
-    return new jsnes.NES({
-        onFrame: function(frameBuffer) {
-            for (let i = 0, j = 0; i < frameBuffer.length; i += 3, j += 4) {
-                imgData.data[j] = frameBuffer[i];
-                imgData.data[j + 1] = frameBuffer[i + 1];
-                imgData.data[j + 2] = frameBuffer[i + 2];
-                imgData.data[j + 3] = 255;
-            }
-            ctx.putImageData(imgData, 0, 0);
-        },
-        onAudioSample: function() {}
+
+    const width = Math.max(1, Math.round(host.clientWidth || host.getBoundingClientRect().width || 0));
+    const height = Math.max(1, Math.round(host.clientHeight || host.getBoundingClientRect().height || 0));
+
+    const dyAnims = Array.from(svg.querySelectorAll('feOffset > animate[attributeName="dy"]'));
+    if (dyAnims.length >= 2) {
+      dyAnims[0].setAttribute('values', `${height}; 0`);
+      dyAnims[1].setAttribute('values', `0; -${height}`);
+    }
+
+    const dxAnims = Array.from(svg.querySelectorAll('feOffset > animate[attributeName="dx"]'));
+    if (dxAnims.length >= 2) {
+      dxAnims[0].setAttribute('values', `${width}; 0`);
+      dxAnims[1].setAttribute('values', `0; -${width}`);
+    }
+
+    const baseDur = 6;
+    const dur = Math.max(0.001, baseDur / (speed || 1));
+    [...dyAnims, ...dxAnims].forEach(a => a.setAttribute('dur', `${dur}s`));
+
+    const disp = svg.querySelector('feDisplacementMap');
+    if (disp) disp.setAttribute('scale', String(30 * (chaos || 1)));
+
+    const filterEl = svg.querySelector(`#${CSS.escape(filterId)}`);
+    if (filterEl) {
+      filterEl.setAttribute('x', '-200%');
+      filterEl.setAttribute('y', '-200%');
+      filterEl.setAttribute('width', '500%');
+      filterEl.setAttribute('height', '500%');
+    }
+
+    requestAnimationFrame(() => {
+      [...dyAnims, ...dxAnims].forEach(a => {
+        if (typeof a.beginElement === 'function') {
+          try {
+            a.beginElement();
+          } catch {
+            console.warn('ElectricBorder: beginElement failed, this may be due to a browser limitation.');
+          }
+        }
+      });
     });
-}
+  };
 
-function startLoop() {
-    if (rafId) return;
-    function frame() {
-        if (nes && running) nes.frame();
-        rafId = requestAnimationFrame(frame);
-    }
-    frame();
-}
+  useEffect(() => {
+    updateAnim();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [speed, chaos]);
 
-romInput.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    status.textContent = `Chargement de ${file.name}...`;
-    const reader = new FileReader();
-    reader.onload = function() {
-        const romData = new Uint8Array(reader.result);
-        nes = makeNes();
-        if (!nes) return;
-        nes.loadROM(romData);
-        status.textContent = `${file.name} chargé — prêt.`;
-        btnRun.disabled = false;
-        btnPause.disabled = false;
-        btnReset.disabled = false;
-        btnSaveState.disabled = false;
-        btnLoadState.disabled = false;
-    };
-    reader.readAsArrayBuffer(file);
-});
+  useLayoutEffect(() => {
+    if (!rootRef.current) return;
+    const ro = new ResizeObserver(() => updateAnim());
+    ro.observe(rootRef.current);
+    updateAnim();
+    return () => ro.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-btnRun.addEventListener('click', () => { running = true; startLoop(); status.textContent="En cours..."; });
-btnPause.addEventListener('click', () => { running = false; status.textContent="En pause."; });
-btnReset.addEventListener('click', () => { if(nes) nes.reset(); status.textContent="Reset effectué."; });
+  const vars = {
+    ['--electric-border-color']: color,
+    ['--eb-border-width']: `${thickness}px`
+  };
 
-btnSaveState.addEventListener('click', () => { if(nes && nes.toJSON){ savedState = JSON.stringify(nes.toJSON()); status.textContent="État sauvegardé."; }});
-btnLoadState.addEventListener('click', () => { if(nes && savedState && nes.fromJSON){ nes.fromJSON(JSON.parse(savedState)); status.textContent="État chargé."; }});
+  return (
+    <div ref={rootRef} className={`electric-border ${className ?? ''}`} style={{ ...vars, ...style }}>
+      <svg ref={svgRef} className="eb-svg" aria-hidden focusable="false">
+        <defs>
+          <filter id={filterId} colorInterpolationFilters="sRGB" x="-20%" y="-20%" width="140%" height="140%">
+            <feTurbulence type="turbulence" baseFrequency="0.02" numOctaves="10" result="noise1" seed="1" />
+            <feOffset in="noise1" dx="0" dy="0" result="offsetNoise1">
+              <animate attributeName="dy" values="700; 0" dur="6s" repeatCount="indefinite" calcMode="linear" />
+            </feOffset>
 
-// Clavier simple
-window.addEventListener('keydown', (ev) => {
-    if (!nes) return;
-    const map = {'ArrowLeft':0x80,'ArrowRight':0x40,'ArrowUp':0x20,'ArrowDown':0x10,'z':0x01,'Z':0x01,'x':0x02,'X':0x02};
-    if(map[ev.key]!==undefined){ nes.controller1.state |= map[ev.key]; ev.preventDefault(); }
-});
-window.addEventListener('keyup', (ev) => {
-    if (!nes) return;
-    const map = {'ArrowLeft':0x80,'ArrowRight':0x40,'ArrowUp':0x20,'ArrowDown':0x10,'z':0x01,'Z':0x01,'x':0x02,'X':0x02};
-    if(map[ev.key]!==undefined){ nes.controller1.state &= ~map[ev.key]; ev.preventDefault(); }
-});
+            <feTurbulence type="turbulence" baseFrequency="0.02" numOctaves="10" result="noise2" seed="1" />
+            <feOffset in="noise2" dx="0" dy="0" result="offsetNoise2">
+              <animate attributeName="dy" values="0; -700" dur="6s" repeatCount="indefinite" calcMode="linear" />
+            </feOffset>
+
+            <feTurbulence type="turbulence" baseFrequency="0.02" numOctaves="10" result="noise1" seed="2" />
+            <feOffset in="noise1" dx="0" dy="0" result="offsetNoise3">
+              <animate attributeName="dx" values="490; 0" dur="6s" repeatCount="indefinite" calcMode="linear" />
+            </feOffset>
+
+            <feTurbulence type="turbulence" baseFrequency="0.02" numOctaves="10" result="noise2" seed="2" />
+            <feOffset in="noise2" dx="0" dy="0" result="offsetNoise4">
+              <animate attributeName="dx" values="0; -490" dur="6s" repeatCount="indefinite" calcMode="linear" />
+            </feOffset>
+
+            <feComposite in="offsetNoise1" in2="offsetNoise2" result="part1" />
+            <feComposite in="offsetNoise3" in2="offsetNoise4" result="part2" />
+            <feBlend in="part1" in2="part2" mode="color-dodge" result="combinedNoise" />
+            <feDisplacementMap
+              in="SourceGraphic"
+              in2="combinedNoise"
+              scale="30"
+              xChannelSelector="R"
+              yChannelSelector="B"
+            />
+          </filter>
+        </defs>
+      </svg>
+
+      <div className="eb-layers">
+        <div ref={strokeRef} className="eb-stroke" />
+        <div className="eb-glow-1" />
+        <div className="eb-glow-2" />
+        <div className="eb-background-glow" />
+      </div>
+
+      <div className="eb-content">{children}</div>
+    </div>
+  );
+};
+
+export default ElectricBorder;
