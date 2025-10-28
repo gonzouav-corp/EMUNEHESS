@@ -1,80 +1,162 @@
-.titre{
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@200;300;400;500;600;700&display=swap");
+.titre {
   font-size: 40px;
   text-align: center;
   margin-right: auto;
   margin-left: auto;
   font-family: 'Press Start 2P', cursive;
   image-rendering: pixelated;
-
-
+  color: var(--text-color);
+  text-shadow: var(--text-shadow);
+  transition: color 260ms ease, text-shadow 260ms ease;
 }
-body{
-  background-image: url("https://images.hdqwalls.com/wallpapers/8-bit-pixel-art-city-2o.jpg"); /* fond d'ecran prevoir transition */
-    background-size: cover; /* adapte à l’écran */
-    background-attachment: fixed; /* fixe le fond d’écran */
-   font-family: 'Press Start 2P', cursive;
 
+/* variables theme (light par défaut) */
+:root{
+  --bg-image: url("https://images.hdqwalls.com/wallpapers/8-bit-pixel-art-city-2o.jpg");
+  --accent: blanchedalmond; /* ligne de séparation */
+  --primary: #a00b56e5; /* bouton */
+  --primary-contrast: #ffffff;
+  --text-color: #000000;
+  --text-shadow: none;
+  /* containers / cards used by rom.html */
+  --container-bg: rgba(208, 132, 255, 0.85);
+  --card-bg: #f7f7f7;
+  --link-bg: #4a90e2;
+  --link-hover: #357ab8;
+}
 
+/* thème sombre overrides */
+[data-theme="dark"]{
+  --bg-image: linear-gradient(160deg,#07101a 0%, #0b1220 100%);
+  --accent: rgba(200,200,210,0.06);
+  --primary: #6ea8ff;
+  --primary-contrast: #0b1220;
+  --text-color: #e9e9e9;
+  --text-shadow: 0 1px 3px rgba(0,0,0,0.75);
+  --container-bg: rgba(10,10,15,0.75);
+  --card-bg: #1e1e1e;
+  --link-bg: #6ea8ff;
+  --link-hover: #93bfff;
+}
 
+/* Background spécifique pour la page index en thème sombre (URL fournie) */
+html.is-index[data-theme="dark"]{
+  --bg-image: url("assets/index-dark.jpg");
+}
 
+/* Background spécifique pour la page rom.html:
+   - thème clair : image fournie (pixelstalk)
+   - thème sombre : conserver l'image "originale" (pinimg gif)
+*/
+html.is-rom {
+  --bg-image: url("assets/rom-light.jpg");
+}
 
+html.is-rom[data-theme="dark"]{
+  --bg-image: url('assets/rom-dark.gif');
+}
 
+/* bouton thème flottant */
+.theme-toggle {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 999;
+  background: rgba(0,0,0,0.35);
+  color: #fff;
+  border: none;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-family: 'Press Start 2P', monospace;
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+}
 
-  @import url("https://fonts.googleapis.com/css2?family=Poppins:wght@200;300;400;500;600;700&display=swap");
+.lignetrans {
+  position: fixed;
+  top: 0px;
+  left: 0px;
+  right: 0px;
+  height: 5px;
+  width: 100%;
+  background-color: var(--accent);
+  opacity: 0.3;
+}
+
+body {
+  background: var(--bg-image) no-repeat center center fixed; /* fond d'ecran prevoir transition */
+  background-size: cover; /* adapte à l’écran */
+  background-attachment: fixed; /* fixe le fond d’écran */
+  font-family: 'Press Start 2P', cursive;
+  min-height: 100vh;
+  color: var(--text-color);
+  text-shadow: var(--text-shadow);
+  transition: color 280ms ease, text-shadow 280ms ease, background 420ms ease, background-size 420ms ease;
+}
+
+/* Center content vertically only on the index page */
+html.is-index body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 200vh; /* preserve previous visual for index */
+}
+
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
   font-family: "Press Start 2P", sans-serif;
 }
-body {
-  height: 200vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #f0f0f0;
-}
-  
 
-.button{
+.button {
   position: relative;
   padding: 10px 22px;
-  background: #a00b56e5;
+  background: var(--primary);
   border-radius: 6px;
-  color: #ffffff;
+  color: var(--primary-contrast);
   font-size: 18px;
   font-weight: 400;
-  box-shadow: 0 5px10px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
+  transition: background-color 220ms ease, color 220ms ease, box-shadow 220ms ease;
 }
 
-.button:active{
-  transform:scale(0.96);
+.button:active {
+  transform: scale(0.96);
 }
+
 .button::before,
-.button::after{
+.button::after {
   content: "";
   position: absolute;
-  left: 50% ;
+  left: 50%;
   transform: translateX(-50%);
   width: 150%;
   height: 100%;
- 
-  background-repeat:no-repeat;
+  background-repeat: no-repeat;
 }
-.button::before{
+
+.button::before {
   top: -70%;
-  
- 
+}
 
+/* gentle transitions for containers and cards when theme changes */
+.container,
+.rom-card {
+  transition: background-color 300ms ease, color 300ms ease, box-shadow 300ms ease;
+}
 
-
-
-
-
-.txt{
+.txt {
   text-align: center;
   font-family: monospace;
   font-size: 25px;
+  color: var(--text-color);
+  text-shadow: var(--text-shadow);
 }
-}
+
+/* simple class used in index.html */
+.pixel-text {
+  color: var(--text-color);
+  text-shadow: var(--text-shadow);
 }

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="fr">
+<html lang="fr" class="is-index">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -9,24 +9,33 @@
   <title>EMUNEHESS</title>
   <link rel="stylesheet" href="styles.css">
   <script src="script.js"></script>
+  <script src="theme-toggle.js" defer></script>
+  <link rel="icon" type="image/jpeg" href="assets/index-dark.jpg">
 </head>
 <body>
- 
+    
+    <button id="theme-toggle" class="theme-toggle" aria-label="Basculer thème">☾/☀</button>
+
+    <script src="nes.js"></script>
      <main class="titre">
       <br>
       <br>
       <h1>EMUNEHESS</h1>
           <button class="button">Importer</button>
           <br>
+          <a href="rom.html" target="_blank">
+            <button class="button">ROMs</button>
+          </a>
           <br>
           <br>
-
-            <div class="aesthetic-screen">
-            <div class="screen">
-              <div class="screen-border">
-                <div class="screen-content">
-                  <p class="pixel-text">Bienvenue sur EMUNEHESS !</p>
+              <div class="aesthetic-screen">
+                <div class="lignetrans"></div>
+              <div class="screen">
+                <div class="screen-border">
+                  <div class="screen-content">
+                    <p class="pixel-text">Bienvenue sur EMUNEHESS !</p>
                   <p class="pixel-text">Chargez vos ROMs pour commencer.</p>
+                  <div id="block"></div>
                 </div>
               </div>
             </div>
